@@ -1,0 +1,308 @@
+---
+title: "Beautiful R Tables"
+author: "Jason Gavrilis"
+editor: source
+execute: 
+  echo: false
+  output: true
+  warning: false
+  cache: true
+prefer-html: true
+format:
+  html:
+    theme: litera
+    toc: true
+    toc-location: left
+    number-sections: false
+    number-depth: 2
+    code-tools: true
+    code-fold: show
+    fig-dpi: 600
+    fig-align: center
+    fig-height: 7
+    fig-width: 9
+    highlight-style: espresso
+    embed-resources: true
+bibliography: references.bib
+---
+
+```{r warning=FALSE, echo=FALSE}
+#load packages
+library(pacman)
+pacman::p_load(tidyverse,flextable, officer, webshot)
+```
+
+# Tables in R
+
+## Base R
+
+-   Base R[^1] doesn't do a good job creating presentation ready tables.
+
+-   For example, lets look at a basic table of the top 10 fastest production cars by acceleration.
+
+    ------------------------------------------------------------------------
+
+[^1]: The [R Base](https://rdrr.io/r/base/base-package.html) package contains the basic functions which let **R** function as a language
+
+```{r echo=FALSE}
+cars <- read.csv("fastest_cars.csv",
+                 check.names=FALSE) %>%
+  as_tibble() %>% 
+  filter(Rank <= 10)
+cars
+```
+
+------------------------------------------------------------------------
+
+-   What if you wanted to put this table in a presentation or report?
+
+    -   you could export the data as text (e.g. csv) and create a table manually?
+
+    -   you could take a screenshot and paste it into a document?
+
+    -   you could copy each value across to another document individually?
+
+-   None of these are good options 😥. Especially if the data changes and you have to do the whole process again! 😠.
+
+-   Luckily, many R packages can help to create tables.
+
+-   For a package that allows beautiful tables that are highly compatibility with Microsoft Word/PowerPoint, **Flextable** is one of the best.
+
+## Flextable
+
+-   [Flextable](Using%20the%20flextable%20R%20package%20(ardata-fr.github.io)) is an R package developed by *David Gohel* that *"creates pretty tables for 'HTML', 'PDF', 'Microsoft Word', 'Microsoft PowerPoint."*
+-   Read on to see some examples[^2].
+
+[^2]: Inspiration for the sophisticated example was taken from [@ardata]
+
+### Simple Example
+
+Let's start by passing the Sound Processor data into the flextable function.
+
+```{r echo=TRUE}
+#pass data to flextable function
+ft <- flextable(ci_processors)
+ft
+
+```
+
+Ok. Not a a bad start at all! Definitely an improvement and arguably good enough to include in a report.\
+\
+But what if we make a few minor improvements.
+
+```{r echo=TRUE}
+#touch up table with alignment, cell formatting, and footnotes / captions
+ft <-
+  flextable(ci_processors) %>% 
+  theme_vanilla() %>% 
+  align(align = "center", part = "all") %>%  
+  align(align = "left", j = "Sound Processor", part = "all") %>% 
+  colformat_num(
+    big.mark = "", decimal.mark = ",",
+    na_str = "na") %>% 
+  autofit(add_w = .1, unit = "cm") %>% 
+  footnote(., i = 1 , j = 3,
+               value = as_paragraph("Year released in Australian market"),
+               ref_symbols = c("1"),
+               part = "header")
+ft
+```
+
+Ok. This looks pretty good. And ready to publish!\
+\
+So how do we get this table into Word or Powerpoint?
+
+There are a few options.
+
+#### Exporting tables
+
+Flextable provides three functions to easily export tables:
+
+1.  ***save_as_image()***
+
+    -   Enables saving to an image (e.g. .png) which can then be imported into Word or Powerpoint.
+
+2.  ***save_as_docx()***
+
+    -   Exports directly into a Word (docx) file.
+
+3.  ***save_as_pptx()***
+
+    -   Exports directly into a Powerpoint (pptx) file.
+
+```{r echo=TRUE, eval=TRUE, output = FALSE}
+# save as image zoom (defaults to a scale level of 2) 
+# and expand (adds whitespace pixels around the 
+# cropped table image, and has a default value of 5)
+save_as_image(ft, path = "output/ci_processor_table_simple.png", 
+              zoom = 4, 
+              expand = 5)
+
+#save directly to word
+save_as_docx(
+  `Sound Processors` = ft,
+  path = "output/ci_processor_table_simple.docx", 
+  pr_section = prop_section(
+  page_size = page_size(
+    orient = "portrait",
+    width = 12, height = 8
+  ),
+  type = "continuous",
+  page_margins = page_mar()
+)
+)
+
+save_as_pptx(`Sound Processors` = ft, 
+               path = "output/ci_processor_table_simple.pptx")
+```
+
+### Sophisticated Example
+
+First we start by adding to the Sound Processor data .
+
+```{r echo=FALSE}
+#create data table adding columns with images
+ci_processors <-
+  tibble(
+    `Sound Processor` = c(
+      "Freedom", "Nucleus 5", "Nucleus 6", "Kanso", "Nucleus 7", "Kanso 2", "Nucleus 8" 
+    ),
+    `Released` = c(2005, 2009, 2013, 2017,2017, 2020, 2022),
+    `Automatic sound Processing` = c(
+      "NA", 
+      "NA", 
+      "SmartSound iQ with SCAN",
+      "SmartSound iQ with SCAN",
+      "SmartSound iQ with SCAN",
+      "SmartSound iQ with SCAN",
+      "SmartSound iQ 2 with SCAN 2"),
+    pic = c(
+      "freedom.png", "n5.png",
+      "n6.png","kanso.png",
+      "n7.png","kanso2.png","n8.png"
+    ),
+    logo = c("c_logo.png", "c_logo.png", 
+             "c_logo.png", "c_logo.png", 
+             "c_logo.png", "c_logo.png",
+             "c_logo.png"
+   )
+   )%>%
+  mutate(
+    logo = file.path("logo", logo),
+    pic = file.path("pic", pic)
+  )
+ci_processors
+```
+
+Then we convert the data to a flextable.
+
+```{r echo=TRUE}
+#format table output
+ft <- flextable(ci_processors,
+  col_keys = c("logo",
+               "Sound Processor",
+               "Released", 
+               "Automatic sound Processing"
+  )
+) %>% 
+  colformat_num(
+    big.mark = "", decimal.mark = ",",
+    na_str = "na")
+ft
+```
+
+Next we add the logo image into the table.
+
+```{r echo=TRUE}
+#add logo image
+ft <- compose(ft, 
+    j = "logo",
+    value = as_paragraph(
+      as_image(src = logo, 
+               width = 0.5, 
+               height = 0.5)
+    )
+  ) %>%  
+  set_header_labels(logo = "Company")
+
+ft
+```
+
+Then we add the sound processor images into the table.
+
+```{r echo=TRUE}
+#add sound processor images
+ft <- compose(ft, 
+    j = "Sound Processor",
+    value = as_paragraph(
+      as_image(src = pic, width = .33, 
+               height = 0.33, 
+               guess_size = TRUE),
+      " ", 
+      as_chunk(x = `Sound Processor`)
+    )
+  )
+ft
+```
+
+We then add some final touches!
+
+```{r echo=TRUE}
+#add final touches
+ft <- theme_vanilla(ft) %>% 
+  align(align = "center", part = "all") %>%  
+  align(align = "left", j = "Sound Processor", part = "all") %>%  
+  autofit(add_w = .1, unit = "cm")
+
+ft %>% 
+   footnote(., i = 1 , j = 3,
+               value = as_paragraph("Year released in Australian market"),
+               ref_symbols = c("1"),
+               part = "header")
+```
+
+And we have a beautiful table ready to show off! 🥳👏\
+
+```{r eval=TRUE, output = FALSE}
+# save as image zoom (defaults to a scale level of 2) 
+# and expand (adds whitespace pixels around the 
+# cropped table image, and has a default value of 5)
+save_as_image(ft, path = "output/ci_processor_table.png", 
+              zoom = 4, 
+              expand = 5)
+
+#save directly to word
+save_as_docx(
+  `Sound Processors` = ft,
+  path = "output/ci_processor_table.docx", 
+  pr_section = prop_section(
+  page_size = page_size(
+    orient = "portrait",
+    width = 12, height = 8
+  ),
+  type = "continuous",
+  page_margins = page_mar()
+)
+)
+
+#this exports but unfortunately images are not displayed.
+#this is limitation of powerpoint. 
+save_as_pptx(`Sound Processors` = ft, 
+               path = "output/ci_processor_table.pptx")
+```
+
+# Resources
+
+#### Flextable:
+
+-   R documentation located at: [flextable package - RDocumentation](https://www.rdocumentation.org/packages/flextable/versions/0.7.0)
+
+-   The help pages are in a bookdown located at: <https://ardata-fr.github.io/flextable-book/>
+
+-   A gallery of examples is available here: <https://ardata.fr/en/flextable-gallery/>
+
+#### Other table options:
+
+-   [How to Make Beautiful Tables in R (rfortherestofus.com)](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r/)
+
+[@base][@flextable][@ardata]
