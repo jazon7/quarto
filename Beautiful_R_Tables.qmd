@@ -70,18 +70,18 @@ cars
 
 ## Flextable
 
--   [Flextable](Using%20the%20flextable%20R%20package%20(ardata-fr.github.io)) is an R package developed by *David Gohel* that *"creates pretty tables for 'HTML', 'PDF', 'Microsoft Word', 'Microsoft PowerPoint."*
+-   [Flextable](Using%20the%20flextable%20R%20package%20(ardata-fr.github.io)) is an R package developed by David Gohel that *"creates pretty tables for 'HTML', 'PDF', 'Microsoft Word', 'Microsoft PowerPoint."*
 -   Read on to see some examples[^2].
 
 [^2]: Inspiration for the sophisticated example was taken from [@ardata]
 
 ### Simple Example
 
-Let's start by passing the Sound Processor data into the flextable function.
+Let's start by passing the Fast Cars data into the flextable function.
 
 ```{r echo=TRUE}
 #pass data to flextable function
-ft <- flextable(ci_processors)
+ft <- flextable(cars)
 ft
 
 ```
@@ -93,16 +93,16 @@ But what if we make a few minor improvements.
 ```{r echo=TRUE}
 #touch up table with alignment, cell formatting, and footnotes / captions
 ft <-
-  flextable(ci_processors) %>% 
+  flextable(cars) %>% 
   theme_vanilla() %>% 
   align(align = "center", part = "all") %>%  
-  align(align = "left", j = "Sound Processor", part = "all") %>% 
+  align(align = "left", j = "Time", part = "all") %>% 
   colformat_num(
     big.mark = "", decimal.mark = ",",
     na_str = "na") %>% 
   autofit(add_w = .1, unit = "cm") %>% 
-  footnote(., i = 1 , j = 3,
-               value = as_paragraph("Year released in Australian market"),
+  footnote(., i = 1 , j = 6,
+               value = as_paragraph("Time taken to reach 60 mph or 97 kmph"),
                ref_symbols = c("1"),
                part = "header")
 ft
@@ -134,14 +134,14 @@ Flextable provides three functions to easily export tables:
 # save as image zoom (defaults to a scale level of 2) 
 # and expand (adds whitespace pixels around the 
 # cropped table image, and has a default value of 5)
-save_as_image(ft, path = "output/ci_processor_table_simple.png", 
+save_as_image(ft, path = "output/fast_cars_table_simple.png", 
               zoom = 4, 
               expand = 5)
 
 #save directly to word
 save_as_docx(
-  `Sound Processors` = ft,
-  path = "output/ci_processor_table_simple.docx", 
+  `Fast Cars` = ft,
+  path = "output/fast_cars_table_simple.docx", 
   pr_section = prop_section(
   page_size = page_size(
     orient = "portrait",
@@ -152,57 +152,70 @@ save_as_docx(
 )
 )
 
-save_as_pptx(`Sound Processors` = ft, 
-               path = "output/ci_processor_table_simple.pptx")
+save_as_pptx(`Fast Cars` = ft, 
+               path = "output/fast_cars_table_simple.pptx")
 ```
 
 ### Sophisticated Example
 
-First we start by adding to the Sound Processor data .
+First we start by modifying our fast cars data .
 
 ```{r echo=FALSE}
 #create data table adding columns with images
-ci_processors <-
-  tibble(
-    `Sound Processor` = c(
-      "Freedom", "Nucleus 5", "Nucleus 6", "Kanso", "Nucleus 7", "Kanso 2", "Nucleus 8" 
-    ),
-    `Released` = c(2005, 2009, 2013, 2017,2017, 2020, 2022),
-    `Automatic sound Processing` = c(
-      "NA", 
-      "NA", 
-      "SmartSound iQ with SCAN",
-      "SmartSound iQ with SCAN",
-      "SmartSound iQ with SCAN",
-      "SmartSound iQ with SCAN",
-      "SmartSound iQ 2 with SCAN 2"),
-    pic = c(
-      "freedom.png", "n5.png",
-      "n6.png","kanso.png",
-      "n7.png","kanso2.png","n8.png"
-    ),
-    logo = c("c_logo.png", "c_logo.png", 
-             "c_logo.png", "c_logo.png", 
-             "c_logo.png", "c_logo.png",
-             "c_logo.png"
-   )
-   )%>%
+logo <- c("tesla_logo.png",
+          "ferrari_logo.png",
+          "porsche_logo.png",
+          "porsche_logo.png",
+          "lambo_logo.png",
+          "bugatti_logo.png",
+           "tesla_logo.png",
+           "tesla_logo.png",
+           "bugatti_logo.png",
+          "porsche_logo.png")
+
+model <-c("model_s_plaid.png",
+          "sf_90.png",
+          "918_spyder.png",
+          "911_turbo.png",
+          "huracan.png", 
+          "chiron.png",
+          "model_s_p100d.png",
+          "model_x_plaid.png",
+          "chiron_sport.png",
+          "taycan.png")
+
+fuel <- c("ev.png",
+          "hybrid.png",
+          "hybrid.png",
+          "ice.png",
+          "ice.png",
+          "ice.png",
+          "ev.png",
+          "ev.png",
+          "ice.png",
+          "ev.png")
+
+cars <- cbind(cars, logo, model, fuel) 
+
+cars <- cars %>% 
   mutate(
-    logo = file.path("logo", logo),
-    pic = file.path("pic", pic)
+    logo = file.path("images/logo", logo),
+    model = file.path("images/model", model),
+    fuel = file.path("images/fuel", fuel)
   )
-ci_processors
+
 ```
 
 Then we convert the data to a flextable.
 
 ```{r echo=TRUE}
 #format table output
-ft <- flextable(ci_processors,
-  col_keys = c("logo",
-               "Sound Processor",
-               "Released", 
-               "Automatic sound Processing"
+ft <- flextable(cars,
+  col_keys = c("Rank",
+               "logo",
+               "Model", 
+               "fuel",
+               "Time"
   )
 ) %>% 
   colformat_num(
@@ -223,27 +236,44 @@ ft <- compose(ft,
                height = 0.5)
     )
   ) %>%  
-  set_header_labels(logo = "Company")
+  set_header_labels(logo = "Make")
 
 ft
 ```
 
-Then we add the sound processor images into the table.
+Then we add the model into the table.
 
 ```{r echo=TRUE}
-#add sound processor images
+#add model images
 ft <- compose(ft, 
-    j = "Sound Processor",
+    j = "Model",
     value = as_paragraph(
-      as_image(src = pic, width = .33, 
-               height = 0.33, 
+      as_image(src = model, width = 0.5, 
+               height = 0.5, 
                guess_size = TRUE),
       " ", 
-      as_chunk(x = `Sound Processor`)
+      as_chunk(x = Model)
     )
   )
 ft
 ```
+
+
+```{r echo=TRUE}
+#add logo image
+ft <- compose(ft, 
+    j = "fuel",
+    value = as_paragraph(
+      as_image(src = fuel, 
+               width = 0.5, 
+               height = 0.5)
+    )
+  ) %>%  
+  set_header_labels(fuel = "Propulsion")
+
+ft
+```
+
 
 We then add some final touches!
 
@@ -251,12 +281,12 @@ We then add some final touches!
 #add final touches
 ft <- theme_vanilla(ft) %>% 
   align(align = "center", part = "all") %>%  
-  align(align = "left", j = "Sound Processor", part = "all") %>%  
+  align(align = "left", j = "Model", part = "all") %>%  
   autofit(add_w = .1, unit = "cm")
 
 ft %>% 
-   footnote(., i = 1 , j = 3,
-               value = as_paragraph("Year released in Australian market"),
+   footnote(., i = 1 , j = 5,
+               value = as_paragraph("Time taken to reach 60 mph or 97 kmph"),
                ref_symbols = c("1"),
                part = "header")
 ```
@@ -267,14 +297,14 @@ And we have a beautiful table ready to show off! 🥳👏\
 # save as image zoom (defaults to a scale level of 2) 
 # and expand (adds whitespace pixels around the 
 # cropped table image, and has a default value of 5)
-save_as_image(ft, path = "output/ci_processor_table.png", 
+save_as_image(ft, path = "output/fast_cars.png", 
               zoom = 4, 
               expand = 5)
 
 #save directly to word
 save_as_docx(
-  `Sound Processors` = ft,
-  path = "output/ci_processor_table.docx", 
+  `Fast cars` = ft,
+  path = "output/fast_cars.docx", 
   pr_section = prop_section(
   page_size = page_size(
     orient = "portrait",
@@ -287,8 +317,8 @@ save_as_docx(
 
 #this exports but unfortunately images are not displayed.
 #this is limitation of powerpoint. 
-save_as_pptx(`Sound Processors` = ft, 
-               path = "output/ci_processor_table.pptx")
+save_as_pptx(`Fast Cars` = ft, 
+               path = "output/fast_cars.pptx")
 ```
 
 # Resources
