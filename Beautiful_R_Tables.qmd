@@ -1,13 +1,11 @@
 ---
-title: "How to Make Publication-Ready Tables in R Using Flextable"
+title: "How to Make Presentation-Ready Tables in R Using Flextable"
 author: "Jason Gavrilis"
 editor: source
 execute: 
   echo: false
   output: true
   warning: false
-  cache: true
-prefer-html: true
 format:
   html:
     theme: litera
@@ -16,7 +14,6 @@ format:
     number-sections: false
     number-depth: 2
     code-fold: show
-    fig-dpi: 600
     fig-align: center
     fig-height: 7
     fig-width: 9
@@ -41,7 +38,7 @@ Key R functions and packages:
 
 -   The `tidyverse` package for data manipulation and piping.
 
-Load required packages.
+Load required packages:
 
 ```{r warning=FALSE, echo=TRUE}
 library(pacman)
@@ -99,29 +96,29 @@ ft
 
 Ok. This looks pretty good and ready to publish.
 
-Here are some options.
+Here are some publishing options.
 
-### Export As Image
+### 1. Export As Image
 
 Use the `save_as_image()` function to export the table in .png format:
 
 ```{r echo=TRUE, eval=TRUE, output = FALSE}
-if(!file.exists("output")){
-  dir.create(file.path("output"))
+if(!file.exists("output/fast_cars")){
+  dir.create(file.path("output/fast_cars"), recursive = TRUE)
 }
-save_as_image(ft, path = "output/fast_cars_table_simple.png", 
+save_as_image(ft, path = "output/fast_cars/fast_cars_table_simple.png", 
               zoom = 4, 
               expand = 5)
 ```
 
-### Export to Microsoft Word
+### 2. Export to Microsoft Word
 
 Use the `save_as_docx()` function to export the table embedded in a Word document:
 
 ```{r echo=TRUE, eval=TRUE, output = FALSE}
 save_as_docx(
   `Fast Cars` = ft,
-  path = "output/fast_cars_table_simple.docx", 
+  path = "output/fast_cars/fast_cars_table_simple.docx", 
   pr_section = prop_section(
   page_size = page_size(
     orient = "portrait",
@@ -133,65 +130,46 @@ save_as_docx(
 )
 ```
 
-### Export to Microsoft Powerpoint
+### 3. Export to Microsoft Powerpoint
 
 Use the `save_as_pptx()` function to export the table embedded into Powerpoint:
 
 ```{r echo=TRUE, eval=TRUE, output = FALSE}
 save_as_pptx(`Fast Cars` = ft, 
-               path = "output/fast_cars_table_simple.pptx")
+               path = "output/fast_cars/fast_cars_table_simple.pptx")
 ```
 
 ## Create an Elaborate Table with Images
 
 We first need to modify our `cars` data frame:
 
-```{r echo=FALSE}
-logo <- c("tesla_logo.png",
-          "ferrari_logo.png",
-          "porsche_logo.png",
-          "porsche_logo.png",
-          "lambo_logo.png",
-          "bugatti_logo.png",
-           "tesla_logo.png",
-           "tesla_logo.png",
-           "bugatti_logo.png",
+```{r echo=TRUE}
+logo <- c("tesla_logo.png","ferrari_logo.png","porsche_logo.png",
+          "porsche_logo.png","lambo_logo.png","bugatti_logo.png",
+           "tesla_logo.png","tesla_logo.png","bugatti_logo.png",
           "porsche_logo.png")
 
-model <-c("model_s_plaid.png",
-          "sf_90.png",
-          "918_spyder.png",
-          "911_turbo.png",
-          "huracan.png", 
-          "chiron.png",
-          "model_s_p100d.png",
-          "model_x_plaid.png",
-          "chiron_sport.png",
-          "taycan.png")
+model <-c("model_s_plaid.png","sf_90.png","918_spyder.png",
+          "911_turbo.png","huracan.png","chiron.png",
+          "model_s_p100d.png","model_x_plaid.png",
+          "chiron_sport.png","taycan.png")
 
-fuel <- c("ev.png",
-          "hybrid.png",
-          "hybrid.png",
-          "ice.png",
-          "ice.png",
-          "ice.png",
-          "ev.png",
-          "ev.png",
-          "ice.png",
+fuel <- c("ev.png","hybrid.png","hybrid.png",
+          "ice.png","ice.png","ice.png",
+          "ev.png","ev.png","ice.png",
           "ev.png")
 
 cars <- cbind(cars, logo, model, fuel) 
 
 cars <- cars %>% 
   mutate(
-    logo = file.path("images/logo", logo),
-    model = file.path("images/model", model),
-    fuel = file.path("images/fuel", fuel)
+    logo = file.path("images/fast_cars/logo", logo),
+    model = file.path("images/fast_cars/model", model),
+    fuel = file.path("images/fast_cars/fuel", fuel)
   )
-
 ```
 
-Then we pass the data frame to a the `flextable` function:
+Then we pass the modified data frame to the `flextable` function:
 
 ```{r echo=TRUE}
 ft <- flextable(cars,
@@ -207,6 +185,7 @@ ft <- flextable(cars,
     na_str = "na")
 ft
 ```
+
 
 Next we add the manufacturer logo images into the table:
 
@@ -224,6 +203,7 @@ ft <- compose(ft,
 ft
 ```
 
+
 Then we add the model images into the table:
 
 ```{r echo=TRUE}
@@ -240,6 +220,7 @@ ft <- compose(ft,
 ft
 ```
 
+
 Then we add the propulsion images:
 
 ```{r echo=TRUE}
@@ -254,6 +235,7 @@ ft <- compose(ft,
   set_header_labels(fuel = "Propulsion")
 ft
 ```
+
 
 We then add some final formatting touches:
 
@@ -270,20 +252,23 @@ ft %>%
                part = "header")
 ```
 
-And we have a beautiful table ready to show off! 🥳👏
+
+And we have a beautiful table ready to show off![^2] 🥳👏
+
+[^2]: When embedding images into a table and exporting to Powerpoint, the images will not be shown (limitation of Powerpoint). However, exporting a table with embedded images as .png or to Microsoft Word works without issue.
 
 ```{r eval=TRUE, output = FALSE, echo = FALSE}
 # save as image zoom (defaults to a scale level of 2) 
 # and expand (adds whitespace pixels around the 
 # cropped table image, and has a default value of 5)
-save_as_image(ft, path = "output/fast_cars.png", 
+save_as_image(ft, path = "output/fast_cars/fast_cars.png", 
               zoom = 4, 
               expand = 5)
 
 #save directly to word
 save_as_docx(
   `Fast cars` = ft,
-  path = "output/fast_cars.docx", 
+  path = "output/fast_cars/fast_cars.docx", 
   pr_section = prop_section(
   page_size = page_size(
     orient = "portrait",
@@ -297,7 +282,7 @@ save_as_docx(
 #this exports but unfortunately images are not displayed.
 #this is limitation of powerpoint. 
 save_as_pptx(`Fast Cars` = ft, 
-               path = "output/fast_cars.pptx")
+               path = "output/fast_cars/fast_cars.pptx")
 ```
 
 # Resources

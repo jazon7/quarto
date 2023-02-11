@@ -2,3 +2,5 @@
   quarto-pub:
     - id: 2eca8341-e722-4d53-abbb-ca0f739fa9c8
       url: 'https://quartopub.com/sites/jazon/how-to-make-publication-ready-tables-in-r-using-flextable'
+    - id: c5b68209-0523-4104-9ac1-3728a5def166
+      url: 'https://quartopub.com/sites/jazon/how-to-make-presentation-ready-tables-in-r-using-flextable'
