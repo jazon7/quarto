@@ -1,0 +1,4 @@
+- source: Beautiful_R_Tables.qmd
+  quarto-pub:
+    - id: 2eca8341-e722-4d53-abbb-ca0f739fa9c8
+      url: 'https://quartopub.com/sites/jazon/how-to-make-publication-ready-tables-in-r-using-flextable'

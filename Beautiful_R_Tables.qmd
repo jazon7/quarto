@@ -1,5 +1,5 @@
 ---
-title: "Beautiful R Tables"
+title: "How to Make Publication-Ready Tables in R Using Flextable"
 author: "Jason Gavrilis"
 editor: source
 execute: 
@@ -15,7 +15,6 @@ format:
     toc-location: left
     number-sections: false
     number-depth: 2
-    code-tools: true
     code-fold: show
     fig-dpi: 600
     fig-align: center
@@ -26,72 +25,62 @@ format:
 bibliography: references.bib
 ---
 
-```{r warning=FALSE, echo=FALSE}
-#load packages
+Here is how you can create a presentation-ready table[^1] in R with the `flextable` package.
+
+[^1]: Inspiration for the table shown in this tutorial came from [ArData](https://www.ardata.fr/en/flextable-gallery/2021-03-26-tennis-players/)
+
+## Prerequisites
+
+Key R functions and packages:
+
+-   `flextable()` to print the tables. Requires the `flextable` package.
+
+-   The `officer` package to help embed the tables into Microsoft Word and Powerpoint.
+
+-   The `webshot` package to render tables as graphic files (e.g. png).
+
+-   The `tidyverse` package for data manipulation and piping.
+
+Load required packages.
+
+```{r warning=FALSE, echo=TRUE}
 library(pacman)
 pacman::p_load(tidyverse,flextable, officer, webshot)
 ```
 
-# Tables in R
+## Create a Simple Table
 
-## Base R
+### Top 10 Fastest Production Cars
 
--   Base R[^1] doesn't do a good job creating presentation ready tables.
+Retrieve a list of the top 10 fastest production cars by acceleration and import as a data frame named `cars`:
 
--   For example, lets look at a basic table of the top 10 fastest production cars by acceleration.
+```{r echo=TRUE}
+if(!file.exists("data")){
+  dir.create(file.path("data"))
+}
+download.file("https://raw.githubusercontent.com/jazon7/fastest_cars/main/fastest_cars.csv", 
+              destfile = "data/fastest_cars.csv")
 
-    ------------------------------------------------------------------------
-
-[^1]: The [R Base](https://rdrr.io/r/base/base-package.html) package contains the basic functions which let **R** function as a language
-
-```{r echo=FALSE}
-cars <- read.csv("fastest_cars.csv",
+cars <- read.csv("data/fastest_cars.csv",
                  check.names=FALSE) %>%
   as_tibble() %>% 
   filter(Rank <= 10)
 cars
 ```
 
-------------------------------------------------------------------------
-
--   What if you wanted to put this table in a presentation or report?
-
-    -   you could export the data as text (e.g. csv) and create a table manually?
-
-    -   you could take a screenshot and paste it into a document?
-
-    -   you could copy each value across to another document individually?
-
--   None of these are good options 😥. Especially if the data changes and you have to do the whole process again! 😠.
-
--   Luckily, many R packages can help to create tables.
-
--   For a package that allows beautiful tables that are highly compatibility with Microsoft Word/PowerPoint, **Flextable** is one of the best.
-
-## Flextable
-
--   [Flextable](Using%20the%20flextable%20R%20package%20(ardata-fr.github.io)) is an R package developed by David Gohel that *"creates pretty tables for 'HTML', 'PDF', 'Microsoft Word', 'Microsoft PowerPoint."*
--   Read on to see some examples[^2].
-
-[^2]: Inspiration for the sophisticated example was taken from [@ardata]
-
-### Simple Example
-
-Let's start by passing the Fast Cars data into the flextable function.
+Then pass the `cars` data frame into the `flextable()` function:
 
 ```{r echo=TRUE}
 #pass data to flextable function
 ft <- flextable(cars)
 ft
-
 ```
 
-Ok. Not a a bad start at all! Definitely an improvement and arguably good enough to include in a report.\
-\
-But what if we make a few minor improvements.
+Ok. Not a a bad start at all!
+
+But let's make a few minor improvements to the alignment, cell formatting, and footnotes:
 
 ```{r echo=TRUE}
-#touch up table with alignment, cell formatting, and footnotes / captions
 ft <-
   flextable(cars) %>% 
   theme_vanilla() %>% 
@@ -108,37 +97,28 @@ ft <-
 ft
 ```
 
-Ok. This looks pretty good. And ready to publish!\
-\
-So how do we get this table into Word or Powerpoint?
+Ok. This looks pretty good and ready to publish.
 
-There are a few options.
+Here are some options.
 
-#### Exporting tables
+### Export As Image
 
-Flextable provides three functions to easily export tables:
-
-1.  ***save_as_image()***
-
-    -   Enables saving to an image (e.g. .png) which can then be imported into Word or Powerpoint.
-
-2.  ***save_as_docx()***
-
-    -   Exports directly into a Word (docx) file.
-
-3.  ***save_as_pptx()***
-
-    -   Exports directly into a Powerpoint (pptx) file.
+Use the `save_as_image()` function to export the table in .png format:
 
 ```{r echo=TRUE, eval=TRUE, output = FALSE}
-# save as image zoom (defaults to a scale level of 2) 
-# and expand (adds whitespace pixels around the 
-# cropped table image, and has a default value of 5)
+if(!file.exists("output")){
+  dir.create(file.path("output"))
+}
 save_as_image(ft, path = "output/fast_cars_table_simple.png", 
               zoom = 4, 
               expand = 5)
+```
 
-#save directly to word
+### Export to Microsoft Word
+
+Use the `save_as_docx()` function to export the table embedded in a Word document:
+
+```{r echo=TRUE, eval=TRUE, output = FALSE}
 save_as_docx(
   `Fast Cars` = ft,
   path = "output/fast_cars_table_simple.docx", 
@@ -151,17 +131,22 @@ save_as_docx(
   page_margins = page_mar()
 )
 )
+```
 
+### Export to Microsoft Powerpoint
+
+Use the `save_as_pptx()` function to export the table embedded into Powerpoint:
+
+```{r echo=TRUE, eval=TRUE, output = FALSE}
 save_as_pptx(`Fast Cars` = ft, 
                path = "output/fast_cars_table_simple.pptx")
 ```
 
-### Sophisticated Example
+## Create an Elaborate Table with Images
 
-First we start by modifying our fast cars data .
+We first need to modify our `cars` data frame:
 
 ```{r echo=FALSE}
-#create data table adding columns with images
 logo <- c("tesla_logo.png",
           "ferrari_logo.png",
           "porsche_logo.png",
@@ -206,10 +191,9 @@ cars <- cars %>%
 
 ```
 
-Then we convert the data to a flextable.
+Then we pass the data frame to a the `flextable` function:
 
 ```{r echo=TRUE}
-#format table output
 ft <- flextable(cars,
   col_keys = c("Rank",
                "logo",
@@ -224,10 +208,9 @@ ft <- flextable(cars,
 ft
 ```
 
-Next we add the logo image into the table.
+Next we add the manufacturer logo images into the table:
 
 ```{r echo=TRUE}
-#add logo image
 ft <- compose(ft, 
     j = "logo",
     value = as_paragraph(
@@ -241,10 +224,9 @@ ft <- compose(ft,
 ft
 ```
 
-Then we add the model into the table.
+Then we add the model images into the table:
 
 ```{r echo=TRUE}
-#add model images
 ft <- compose(ft, 
     j = "Model",
     value = as_paragraph(
@@ -258,9 +240,9 @@ ft <- compose(ft,
 ft
 ```
 
+Then we add the propulsion images:
 
 ```{r echo=TRUE}
-#add logo image
 ft <- compose(ft, 
     j = "fuel",
     value = as_paragraph(
@@ -270,15 +252,12 @@ ft <- compose(ft,
     )
   ) %>%  
   set_header_labels(fuel = "Propulsion")
-
 ft
 ```
 
-
-We then add some final touches!
+We then add some final formatting touches:
 
 ```{r echo=TRUE}
-#add final touches
 ft <- theme_vanilla(ft) %>% 
   align(align = "center", part = "all") %>%  
   align(align = "left", j = "Model", part = "all") %>%  
@@ -291,9 +270,9 @@ ft %>%
                part = "header")
 ```
 
-And we have a beautiful table ready to show off! 🥳👏\
+And we have a beautiful table ready to show off! 🥳👏
 
-```{r eval=TRUE, output = FALSE}
+```{r eval=TRUE, output = FALSE, echo = FALSE}
 # save as image zoom (defaults to a scale level of 2) 
 # and expand (adds whitespace pixels around the 
 # cropped table image, and has a default value of 5)
@@ -323,7 +302,7 @@ save_as_pptx(`Fast Cars` = ft,
 
 # Resources
 
-#### Flextable:
+#### Flextable Package [@flextable]:
 
 -   R documentation located at: [flextable package - RDocumentation](https://www.rdocumentation.org/packages/flextable/versions/0.7.0)
 
@@ -331,8 +310,6 @@ save_as_pptx(`Fast Cars` = ft,
 
 -   A gallery of examples is available here: <https://ardata.fr/en/flextable-gallery/>
 
-#### Other table options:
+#### Other R Table Packages:
 
--   [How to Make Beautiful Tables in R (rfortherestofus.com)](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r/)
-
-[@base][@flextable][@ardata]
+-   [How to Make Beautiful Tables in R](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r/)
