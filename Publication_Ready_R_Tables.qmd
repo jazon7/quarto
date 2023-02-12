@@ -1,0 +1,163 @@
+---
+title: "How to Make Publication-Ready Tables in R Using gtsummary"
+author: "Jason Gavrilis"
+editor: source
+execute: 
+  echo: false
+  output: true
+  warning: false
+format:
+  html:
+    theme: litera
+    toc: true
+    toc-location: left
+    number-sections: false
+    number-depth: 2
+    code-fold: show
+    fig-align: center
+    fig-height: 7
+    fig-width: 9
+    highlight-style: espresso
+    embed-resources: true
+bibliography: references.bib
+---
+
+Here is how you can create a presentation-ready table[^1] in R with the `flextable` package.
+
+[^1]: Inspiration for the table shown in this tutorial came from [ArData](https://www.ardata.fr/en/flextable-gallery/2021-03-26-tennis-players/)
+
+## Prerequisites
+
+Key R functions and packages:
+
+-   `tbl_summary()` to make summary tables. Requires the `gtsummary` package.
+
+-   `flextable()` to convert the summary tables. Requires the `flextable` package.
+
+-   The `officer` package to help embed the tables into Microsoft Word and Powerpoint.
+
+-   The `webshot` package to render tables as graphic files (e.g. png).
+
+-   The `tidyverse` package for data manipulation and piping.
+
+-   The `labelled` package for adding labels to variables.
+
+Load required packages:
+
+```{r warning=FALSE, echo=TRUE}
+library(pacman)
+pacman::p_load(tidyverse, medicaldata, officer, gtsummary, webshot, flextable, labelled)
+```
+
+## Create a Basic Publication-Ready Summary Table
+
+### Streptomycin for Tuberculosis
+
+Import the `strep_tb` data set from the `medicaldata` package as a data frame called `strep`:
+
+```{r echo=TRUE}
+strep <- medicaldata::strep_tb
+head(strep)
+```
+
+Then add variable labels[^2] to the `strep` data frame with the `val_labels()` function:
+
+[^2]: Labeling variables is not essential, but will save time and effort when making summary tables.
+
+```{r echo=TRUE}
+strep_labels <- c(patient_id = "Patient ID",
+            arm = "Study Arm",
+            dose_strep_g = "Dose of Streptomycin (Grams)",
+            does_PAS_g = "Dose of Para-Amino-Salicylate (Grams)",
+            gender = "Gender",
+            baseline_condition = "Baseline Condition",
+            baseline_temp = "Baseline Temperature (F)",
+            baseline_esr = "Baseline Erythrocyte Sedimentation Rate (mmph)",
+            baseline_cavitation = "Baseline Cavitation of the Lungs on chest X-ray",
+            strep_resistance = "Resistance to Streptomycin at 6 months",
+            radiologic_6m = "Radiologic outcome at 6 months",
+            radnum = "Numeric Rating of Chest X-ray at 6 months",
+            improved = "Improvement at 6 months")
+
+# Assign labels to data frame variables
+strep <- set_variable_labels(strep,         
+                             .labels = strep_labels)
+#check labels
+labelled::var_label(strep)
+```
+
+Now pass the `strep` data frame - minus the patient_id column - to the `tbl_summary()` function:
+
+```{r echo=TRUE}
+strep_tbl <-
+  gtsummary::tbl_summary(strep %>% select(-patient_id))
+strep_tbl
+```
+
+Ok. Without any tinkering the `tbl_summary()` function has created a very nice looking summary table of the strep data.
+
+But before we publish, lets make some modifications.
+
+## Create an Advanced Publication-Ready Summary Table
+
+Here are some publishing options.
+
+### 1. Export As Image
+
+Convert to a flextable with the `as_flextable()` and then use the `save_as_image()` function to export the table in .png format:
+
+```{r echo=TRUE, eval=TRUE, output = FALSE}
+if(!file.exists("output/strep")){
+  dir.create(file.path("output/strep"), recursive = TRUE)
+}
+strep_tbl_ft <- strep_tbl %>% 
+  as_flex_table()
+
+save_as_image(strep_tbl_ft, path = "output/strep/strep_tbl_simple.png", 
+              zoom = 4, 
+              expand = 5)
+```
+
+### 2. Export to Microsoft Word
+
+Use the `save_as_docx()` function to export the table embedded in a Word document:
+
+```{r echo=TRUE, eval=TRUE, output = FALSE}
+save_as_docx(
+  `Strep` = strep_tbl_ft,
+  path = "output/strep/strep_tbl_simple.docx", 
+  pr_section = prop_section(
+  page_size = page_size(
+    orient = "portrait",
+    width = 12, height = 8
+  ),
+  type = "continuous",
+  page_margins = page_mar()
+)
+)
+```
+
+### 3. Export to Microsoft Powerpoint
+
+Use the `save_as_pptx()` function to export the table embedded into Powerpoint:
+
+```{r echo=TRUE, eval=TRUE, output = FALSE}
+save_as_pptx(`Strep` = strep_tbl_ft, 
+               path = "output/strep/strep_table_simple.pptx")
+```
+
+## 
+
+# Resources
+
+#### Flextable Package [@flextable]:
+
+-   R documentation located at: [flextable package - RDocumentation](https://www.rdocumentation.org/packages/flextable/versions/0.7.0)
+
+-   The help pages are in a bookdown located at: <https://ardata-fr.github.io/flextable-book/>
+
+-   A gallery of examples is available here: <https://ardata.fr/en/flextable-gallery/>
+
+#### Other R Table Packages:
+
+-   [How to Make Beautiful Tables in R](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r/)
