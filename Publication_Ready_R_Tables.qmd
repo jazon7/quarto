@@ -3,7 +3,7 @@ title: "How to Make Publication-Ready Tables in R Using gtsummary"
 author: "Jason Gavrilis"
 editor: source
 execute: 
-  echo: false
+  echo: true
   output: true
   warning: false
 format:
@@ -22,9 +22,7 @@ format:
 bibliography: references.bib
 ---
 
-Here is how you can create a presentation-ready table[^1] in R with the `flextable` package.
-
-[^1]: Inspiration for the table shown in this tutorial came from [ArData](https://www.ardata.fr/en/flextable-gallery/2021-03-26-tennis-players/)
+Here is how you can create a presentation-ready table in R with the `gtsummary` package.
 
 ## Prerequisites
 
@@ -32,7 +30,7 @@ Key R functions and packages:
 
 -   `tbl_summary()` to make summary tables. Requires the `gtsummary` package.
 
--   `flextable()` to convert the summary tables. Requires the `flextable` package.
+-   `as_flex_table()` to convert the summary tables. Requires the `flextable` package.
 
 -   The `officer` package to help embed the tables into Microsoft Word and Powerpoint.
 
@@ -42,6 +40,8 @@ Key R functions and packages:
 
 -   The `labelled` package for adding labels to variables.
 
+-   The `medicaldata` package for the data.
+
 Load required packages:
 
 ```{r warning=FALSE, echo=TRUE}
@@ -49,7 +49,7 @@ library(pacman)
 pacman::p_load(tidyverse, medicaldata, officer, gtsummary, webshot, flextable, labelled)
 ```
 
-## Create a Basic Publication-Ready Summary Table
+## Create a Publication-Ready Summary Table
 
 ### Streptomycin for Tuberculosis
 
@@ -60,11 +60,26 @@ strep <- medicaldata::strep_tb
 head(strep)
 ```
 
-Then add variable labels[^2] to the `strep` data frame with the `val_labels()` function:
+Clean up the `strep` data set and add variable labels[^1] to each variable with the `val_labels()` function:
 
-[^2]: Labeling variables is not essential, but will save time and effort when making summary tables.
+[^1]: Labeling variables is not essential, but will save time and effort when making summary tables. Without variable labels, `gtsummary` will use the column names for naming the variables in the table. You would then have to manually rename all variables.
 
 ```{r echo=TRUE}
+#recode all values beggingin with 1_ to 6_ 
+for (i in 1:6){
+  pat <- paste0(i,"_")
+  strep[] <- lapply(strep, gsub, pattern=pat, replacement='')
+}
+rm(i, pat)
+
+#convert variables to factors or numeric
+strep <- strep %>% 
+  mutate_if(., is.character, as_factor) %>% 
+  mutate(improved = as.logical(improved)) %>% 
+  mutate(rad_num = as.numeric(rad_num)) %>% 
+  mutate(improvement = ifelse(improved == TRUE, 1, 0))
+
+
 strep_labels <- c(patient_id = "Patient ID",
             arm = "Study Arm",
             dose_strep_g = "Dose of Streptomycin (Grams)",
@@ -77,43 +92,95 @@ strep_labels <- c(patient_id = "Patient ID",
             strep_resistance = "Resistance to Streptomycin at 6 months",
             radiologic_6m = "Radiologic outcome at 6 months",
             radnum = "Numeric Rating of Chest X-ray at 6 months",
-            improved = "Improvement at 6 months")
+            improved = "Improvement at 6 months?",
+            improvement = "Improvement at 6 months?")
 
 # Assign labels to data frame variables
 strep <- set_variable_labels(strep,         
-                             .labels = strep_labels)
-#check labels
-labelled::var_label(strep)
+                             .labels = strep_labels) %>% 
+  select(- improved)
 ```
 
-Now pass the `strep` data frame - minus the patient_id column - to the `tbl_summary()` function:
+Now pass the `strep` data frame - minus the patient_id column - to the `tbl_summary()`[^2] function:
+
+[^2]: First set gtsummary theme to the journal 'jama' and 'compact'. Also set the default print engine to 'flextable'. These are my go-to settings for optimal looking tables.
 
 ```{r echo=TRUE}
+#Setting theme
+theme_gtsummary_journal(journal = 'jama')
+#Setting theme `Compact`
+theme_gtsummary_compact()
+#Setting theme `printer to flextable
+theme_gtsummary_printer(print_engine = c("flextable"),set_theme = TRUE)
 strep_tbl <-
-  gtsummary::tbl_summary(strep %>% select(-patient_id))
+  gtsummary::tbl_summary(strep %>% 
+                           select(-patient_id))
 strep_tbl
 ```
 
-Ok. Without any tinkering the `tbl_summary()` function has created a very nice looking summary table of the strep data.
-
-But before we publish, lets make some modifications.
+With only minimal tinkering the `tbl_summary()` function has created a very nice looking summary table of the `strep` data!
 
 ## Create an Advanced Publication-Ready Summary Table
 
-Here are some publishing options.
+The strep data is based on one of the first modern randomised control trials which was published in the BMJ [@streptom1948].
+
+Thus, let's print the `strep` patient data separated into the two study arms:
+
+```{r}
+strep_tbl <-
+  gtsummary::tbl_summary(
+    strep %>% select(-patient_id, -dose_PAS_g, -dose_strep_g, -rad_num),
+    by = arm,
+     missing = "no") %>% 
+  add_overall() %>% #add overall column 
+  add_p() %>% # test for a difference between groups
+  modify_header(label = "**Patient Characteristics**") %>% # update the column header
+  bold_labels() 
+strep_tbl
+```
+
+Or, with the `tbl_strata()` function let's print the patient outcomes by study arm and baseline condition:
+
+```{r}
+strep %>%
+  select(arm, baseline_condition, improvement, radiologic_6m) %>%
+  tbl_strata(
+    strata = baseline_condition,
+    ~ .x %>%
+      tbl_summary(by = arm, missing = "no") %>%
+            modify_header(all_stat_cols() ~ "**{level}**, N = {n} ({style_percent(p)}%)") %>% 
+       modify_header(label = "**Patient Outcomes**") %>% 
+      modify_caption("**Outcome by Baseline Condition and Study Arm**") 
+  )
+```
+
+We can even print a beautiful summary of a regression model[^3] with the `tbl_regression` function:
+
+[^3]: Here I'm showing a regression model predicting if the patient improved by study arm (control vs. streptomycin) and gender. Note, this article is aimed at showing how to print tables, not how to perform correct statistical analysis.
+
+```{r warning=FALSE}
+model <- glm(improvement ~ arm + gender, strep, family = binomial)
+tbl <- tbl_regression(model, exponentiate = TRUE)
+tbl
+```
+
+# Exporting tables
+
+With help of the `as_flex_table()` function, first convert the table to a flextable and then export using one of the following options:
 
 ### 1. Export As Image
 
-Convert to a flextable with the `as_flextable()` and then use the `save_as_image()` function to export the table in .png format:
+Use the `save_as_image()` function to export in .png format:
 
 ```{r echo=TRUE, eval=TRUE, output = FALSE}
 if(!file.exists("output/strep")){
   dir.create(file.path("output/strep"), recursive = TRUE)
 }
-strep_tbl_ft <- strep_tbl %>% 
+#convert to flextable
+strep_tbl_flx <- strep_tbl %>% 
   as_flex_table()
-
-save_as_image(strep_tbl_ft, path = "output/strep/strep_tbl_simple.png", 
+#save as png
+save_as_image(strep_tbl_flx, path = "output/strep/strep_tbl_simple.png", 
               zoom = 4, 
               expand = 5)
 ```
@@ -124,7 +191,7 @@ Use the `save_as_docx()` function to export the table embedded in a Word documen
 
 ```{r echo=TRUE, eval=TRUE, output = FALSE}
 save_as_docx(
-  `Strep` = strep_tbl_ft,
+  `Strep` = strep_tbl_flx,
   path = "output/strep/strep_tbl_simple.docx", 
   pr_section = prop_section(
   page_size = page_size(
@@ -142,22 +209,20 @@ save_as_docx(
 Use the `save_as_pptx()` function to export the table embedded into Powerpoint:
 
 ```{r echo=TRUE, eval=TRUE, output = FALSE}
-save_as_pptx(`Strep` = strep_tbl_ft, 
+save_as_pptx(`Strep` = strep_tbl_flx, 
                path = "output/strep/strep_table_simple.pptx")
 ```
 
-## 
-
 # Resources
 
-#### Flextable Package [@flextable]:
+`flextable` Package [@flextable]
 
--   R documentation located at: [flextable package - RDocumentation](https://www.rdocumentation.org/packages/flextable/versions/0.7.0)
+`gtsummary` Package [@gtsummary]
 
--   The help pages are in a bookdown located at: <https://ardata-fr.github.io/flextable-book/>
+`tidyverse` Package [@tidyverse]
 
--   A gallery of examples is available here: <https://ardata.fr/en/flextable-gallery/>
+`labelled` Package [@labelled]
 
-#### Other R Table Packages:
+`officer` Package [@officer]
 
--   [How to Make Beautiful Tables in R](https://rfortherestofus.com/2019/11/how-to-make-beautiful-tables-in-r/)
+`medicaldata` [@medicaldata]
